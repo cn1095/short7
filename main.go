@@ -2331,6 +2331,28 @@ func main() {
 
     // 设置http请求处理程序
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// ===== 调试日志：输出所有请求头信息 =====  
+    log.Printf("=== 请求调试信息 ===")  
+    log.Printf("请求方法: %s", r.Method)  
+    log.Printf("请求路径: %s", r.URL.Path)  
+    log.Printf("完整URL: %s", r.URL.String())  
+    log.Printf("RemoteAddr: %s", r.RemoteAddr)  
+    log.Printf("Host: %s", r.Host)  
+      
+    // 输出所有请求头  
+    log.Printf("=== 所有请求头 ===")  
+    for name, headers := range r.Header {  
+        for _, h := range headers {  
+            log.Printf("  %s: %s", name, h)  
+        }  
+    }  
+      
+    // 特别关注几个重要的头  
+    log.Printf("Referer: %s", r.Header.Get("Referer"))  
+    log.Printf("User-Agent: %s", r.Header.Get("User-Agent"))  
+    log.Printf("X-Forwarded-For: %s", r.Header.Get("X-Forwarded-For"))  
+    log.Printf("X-Real-IP: %s", r.Header.Get("X-Real-IP"))  
+    log.Printf("=== 调试信息结束 ===")
 	// 设置CORS相关头
    	 w.Header().Set("Access-Control-Allow-Origin", "*")  // 允许所有域名访问
     	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")  // 允许的请求方法
