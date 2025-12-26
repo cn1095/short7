@@ -1,7 +1,8 @@
 <div align="center">
 
   # short-url 缩短链接服务
-  
+
+  <a href="https://deepwiki.com/cn1095/short0"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 <a href="https://github.com/lmq8267/short-url-go/releases"><img src="https://img.shields.io/github/downloads/lmq8267/short-url-go/total"/></a>
 <a href="https://github.com/lmq8267/short-url-go/graphs/contributors"><img src="https://img.shields.io/github/contributors-anon/lmq8267/short-url-go"/></a>
 <a href="https://github.com/lmq8267/short-url-go/releases/"><img src="https://img.shields.io/github/release/lmq8267/short-url-go"/></a>
