@@ -356,19 +356,29 @@ func NewHybridStorage(redis *RedisStorage, file *FileStorage) *HybridStorage {
 	return &HybridStorage{redis: redis, file: file}
 }
 
-func (hs *HybridStorage) SaveRule(code string, req ApiRequest) error {
-	if redisEnabled {
-		// Redis可用时，只保存到Redis
-		err := hs.redis.SaveRule(code, req)
-		if err != nil {
-			log.Printf("Redis保存失败: %v，回退到本地short_data文件存储", err)
-			// Redis保存失败时，回退到本地文件
-			return hs.file.SaveRule(code, req)
-		}
-		return nil
-	}
-	// Redis不可用时，保存到本地文件
-	return hs.file.SaveRule(code, req)
+func (hs *HybridStorage) SaveRule(code string, req ApiRequest) error {  
+    var redisErr, fileErr error  
+      
+    if redisEnabled {  
+        // 保存到Redis  
+        redisErr = hs.redis.SaveRule(code, req)  
+        if redisErr != nil {  
+            log.Printf("Redis保存失败: %v", redisErr)  
+        }  
+    }  
+      
+    // 始终保存到本地文件  
+    fileErr = hs.file.SaveRule(code, req)  
+    if fileErr != nil {  
+        log.Printf("本地文件保存失败: %v", fileErr)  
+    }  
+      
+    // 如果都失败才返回错误  
+    if redisErr != nil && fileErr != nil {  
+        return fmt.Errorf("Redis和本地文件保存都失败: Redis错误=%v, 文件错误=%v", redisErr, fileErr)  
+    }  
+      
+    return nil  
 }
 
 func (hs *HybridStorage) LoadRule(code string) (ApiRequest, bool, error) {
@@ -386,19 +396,29 @@ func (hs *HybridStorage) LoadRule(code string) (ApiRequest, bool, error) {
 	return hs.file.LoadRule(code)
 }
 
-func (hs *HybridStorage) DeleteRule(code string) error {
-	if redisEnabled {
-		// Redis可用时，只删除Redis中的数据
-		err := hs.redis.DeleteRule(code)
-		if err != nil {
-			log.Printf("Redis删除失败: %v，回退到本地short_data文件存储", err)
-			// Redis删除失败时，回退到本地文件
-			return hs.file.DeleteRule(code)
-		}
-		return nil
-	}
-	// Redis不可用时，删除本地文件
-	return hs.file.DeleteRule(code)
+func (hs *HybridStorage) DeleteRule(code string) error {  
+    var redisErr, fileErr error  
+      
+    if redisEnabled {  
+        // 从Redis删除  
+        redisErr = hs.redis.DeleteRule(code)  
+        if redisErr != nil {  
+            log.Printf("Redis删除失败: %v", redisErr)  
+        }  
+    }  
+      
+    // 从本地文件删除  
+    fileErr = hs.file.DeleteRule(code)  
+    if fileErr != nil {  
+        log.Printf("本地文件删除失败: %v", fileErr)  
+    }  
+      
+    // 如果都失败才返回错误  
+    if redisErr != nil && fileErr != nil {  
+        return fmt.Errorf("Redis和本地文件删除都失败: Redis错误=%v, 文件错误=%v", redisErr, fileErr)  
+    }  
+      
+    return nil  
 }
 
 func (hs *HybridStorage) ListRules() ([]ApiRequest, error) {
@@ -580,19 +600,20 @@ func syncLocalToRedis() {
 
 		// 删除已同步的本地文件
 		if shouldDelete {
-			filePath := filepath.Join(dataDir, rule.ShortCode+".json")
-			if err := os.Remove(filePath); err != nil {
-				log.Printf("删除本地规则文件 %s 失败: %v", rule.ShortCode, err)
-			} else {
-				deleteCount++
-				log.Printf("删除已同步的本地规则文件: %s", rule.ShortCode)
-			}
+			// filePath := filepath.Join(dataDir, rule.ShortCode+".json")
+			// if err := os.Remove(filePath); err != nil {
+			// 	log.Printf("删除本地规则文件 %s 失败: %v", rule.ShortCode, err)
+			// } else {
+			// 	deleteCount++
+			// 	log.Printf("删除已同步的本地规则文件: %s", rule.ShortCode)
+			// }
 		} else {
 			skipCount++
 		}
 	}
 
-	log.Printf("数据同步完成: 同步 %d 条，跳过 %d 条，删除 %d 个文件", syncCount, skipCount, deleteCount)
+	// log.Printf("数据同步完成: 同步 %d 条，跳过 %d 条，删除 %d 个文件", syncCount, skipCount, deleteCount)
+	log.Printf("数据同步完成: 同步 %d 条，跳过 %d 条", syncCount, skipCount)
 
 	// 同步完成后重新统计并更新total_rules
 	log.Println("开始重新统计并更新后缀已使用数量...")
