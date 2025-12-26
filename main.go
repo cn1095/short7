@@ -1168,25 +1168,6 @@ func shortHandler(w http.ResponseWriter, r *http.Request, dataDir string) {
 		return
 	}
 
-	// 检查密码保护 - 重定向到认证页面
-	if apiReq.Password != "" {
-		// 检查查询参数中的密码
-		password := r.URL.Query().Get("password")
-		if password == "" {
-			// 如果是POST请求，尝试从表单获取
-			if r.Method == "POST" {
-				r.ParseForm()
-				password = r.FormValue("password")
-			}
-		}
-
-		if password != apiReq.Password {
-			// 密码错误或未提供，重定向到认证页面
-			http.Redirect(w, r, "/admin-auth", http.StatusSeeOther)
-			return
-		}
-	}
-
 	// 检查expiration字段
 	if apiReq.Expiration != "" {
 		// 解析expiration时间
@@ -2159,11 +2140,11 @@ func renderAdminPage(w http.ResponseWriter, r *http.Request, data []ApiRequest) 
 						hideLoading();
 						if (xhr.status === 200) {
 						   if (xhr.responseText.includes('删除成功')) {
+						   	  row.remove();
 						      alert('删除成功');
 						   } else {
 						      alert('删除失败');
 						   }
-							location.reload();
 						}
 					};
 					xhr.onerror = function() {  
@@ -2229,6 +2210,7 @@ func renderAdminPage(w http.ResponseWriter, r *http.Request, data []ApiRequest) 
 		function submitEdit(row) {
 			var cells = row.getElementsByTagName("td");
 			var data = {};
+			var originalValues = {};
 			for (var i = 0; i < cells.length; i++) {
 				if (i < cells.length - 1) { // 跳过最后一列（操作按钮）
 					var field = cells[i].getAttribute("data-field");
@@ -2268,11 +2250,23 @@ func renderAdminPage(w http.ResponseWriter, r *http.Request, data []ApiRequest) 
 				hideLoading();
 				if (xhr.status === 200) {
 				   if (xhr.responseText.includes('修改成功')) {
+				   	  // 成功：更新这一行的显示内容  
+                	for (var i = 0; i < cells.length - 1; i++) {  
+                    	var field = cells[i].getAttribute("data-field");  
+                    	if (field) {  
+                        	var input = cells[i].querySelector("input, textarea, select");  
+                        	cells[i].innerHTML = input.value;  
+                        	cells[i].setAttribute("data-original", input.value);  
+                    	}  
+                	}  
+                	// 恢复编辑按钮状态  
+                	row.querySelector("button.edit").style.display = "inline-block";  
+               		 row.querySelector("button.submit").style.display = "none";  
+                	row.classList.remove("editing");
 				      alert('修改成功');
 				   } else {
 				      alert('修改失败');
 				   }
-					location.reload();
 				}
 			};
 			xhr.onerror = function() {  
@@ -2287,7 +2281,8 @@ func renderAdminPage(w http.ResponseWriter, r *http.Request, data []ApiRequest) 
 				if (i < cells.length - 1) { // 跳过最后一列（操作按钮）
 					var field = cells[i].getAttribute("data-field");
 					if (field) {
-						cells[i].innerHTML = cells[i].querySelector("input, textarea, select").value;
+						var originalValue = cells[i].getAttribute("data-original") || "";  
+            			cells[i].innerHTML = originalValue;
 					}
 				}
 			}
