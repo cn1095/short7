@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"os/signal"
 	"compress/gzip"
 	"path/filepath"
@@ -3662,14 +3663,34 @@ func initializeIPDatabases() {
 }
 
 func runAsDaemon() {
-    switch runtime.GOOS {
-    case "linux", "freebsd", "darwin":
-        runAsDaemonUnix()
-    case "windows":
-        runAsDaemonWindows()
-    default:
-        log.Println("当前系统不支持后台模式")
-    }
+	switch runtime.GOOS {
+	case "linux", "freebsd", "darwin":
+		if os.Getppid() != 1 {
+			cmd := exec.Command(os.Args[0], os.Args[1:]...)
+			cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+			cmd.Stdout, cmd.Stderr, cmd.Stdin = nil, nil, nil
+			
+			// 显式传递环境变量  
+            cmd.Env = os.Environ()
+			err := cmd.Start()
+			if err != nil {
+				log.Fatalf("后台运行失败: %v", err)
+			}
+			os.Exit(0)
+		}
+
+	case "windows":
+		cmd := exec.Command(os.Args[0], os.Args[1:]...)
+		cmd.Env = os.Environ()
+		err := cmd.Start()
+		if err != nil {
+			log.Fatalf("后台运行失败: %v", err)
+		}
+		os.Exit(0)
+
+	default:
+		log.Println("当前系统不支持后台模式")
+	}
 }
 
 func main() {
